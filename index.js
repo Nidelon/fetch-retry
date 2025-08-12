@@ -8,7 +8,7 @@ import { loadMovingUIState } from '../../../../scripts/power-user.js';
 const EXTENSION_NAME = 'Fetch Retry';
 const settingsKey = 'FetchRetry';
 const extensionName = "fetch-retry";
-const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
+const extensionFolderPath = `/data/default-user/extensions/${extensionName}`;
 
 let fetchRetrySettings = {
     enabled: true,
