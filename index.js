@@ -8,7 +8,6 @@ import { loadMovingUIState } from '../../../../scripts/power-user.js';
 const EXTENSION_NAME = 'Fetch Retry';
 const settingsKey = 'FetchRetry';
 const extensionName = "fetch-retry";
-const extensionFolderPath = `data/default-user/extensions/${extensionName}`;
 
 let fetchRetrySettings = {
     enabled: true,
@@ -370,7 +369,7 @@ function getBaseUrl() {
         if (currentScript && currentScript.src) {
             baseUrl = currentScript.src.substring(0, currentScript.src.lastIndexOf('/'));
         } else {
-            baseUrl = `${window.location.origin}data/default-user/extensions/${extensionName}`;
+            baseUrl = `${window.location.origin}scripts/extensions/third-party/${extensionName}`;
         }
     }
     return baseUrl;
