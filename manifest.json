@@ -5,6 +5,6 @@
   "optional": [],
   "js": "index.js",
   "author": "Jxxy",
-  "version": "1.0.0",
-  "homePage": "https://github.com/SillyTavern/SillyTavern"
+  "version": "1.1.0",
+  "homePage": "https://github.com/Hikarushmz/fetch-retry"
 }
