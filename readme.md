@@ -1,7 +1,7 @@
 # Fetch Retry
 
 Version: 1.1.0
-Author: Jxxy
+Author: Jxxy | Hikarushmz
 
 ## Overview
 
