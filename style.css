@@ -1,0 +1,184 @@
+/* Styles for Fetch Retry UI - Cleaned and Organized */
+
+/* Popout Window */
+#fetch_retry_popout {
+    position: fixed;
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 450px;
+    max-width: 95vw;
+    max-height: 80vh;
+    background-color: var(--SmartThemeBlurTintColor, rgba(40, 40, 40, 0.8));
+    backdrop-filter: blur(var(--SmartThemeBlurStrength, 10px));
+    border: 1px solid var(--SmartThemeBorderColor, #555);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    z-index: 10001;
+    display: flex;
+    flex-direction: column;
+}
+
+#fetchRetryPopoutHeader {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor, #555);
+    cursor: move;
+}
+
+#fetchRetryPopoutHeader .title {
+    font-weight: bold;
+    font-size: 1.1em;
+    color: var(--SmartThemeBodyColor, #fff);
+}
+
+#fetchRetryPopoutHeader .drag-grabber {
+    margin-left: auto;
+    margin-right: 15px;
+}
+
+#fetch_retry_content_container {
+    overflow-y: auto;
+    padding: 15px;
+    flex-grow: 1;
+}
+
+/* Settings Layout */
+.fetch-retry-setting-item {
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor, #444);
+}
+
+.fetch-retry-setting-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 5px;
+}
+
+.fetch-retry-setting-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.fetch-retry-setting-wrapper .setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.fetch-retry-setting-wrapper label {
+    font-weight: 600;
+    color: var(--SmartThemeBodyColor, #eee);
+}
+
+.fetch-retry-setting-wrapper small {
+    font-size: 0.8em;
+    color: var(--SmartThemeSubtleColor, #aaa);
+    line-height: 1.4;
+    margin-top: -4px;
+}
+
+/* Input Elements */
+.fetch-retry-setting-wrapper input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: var(--customThemeColor, #007bff);
+    cursor: pointer;
+}
+
+.fetch-retry-setting-wrapper .slider-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin-top: 5px;
+}
+
+.fetch-retry-setting-wrapper input[type="range"] {
+    display: none; /* Hide the slider */
+    flex-grow: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 5px;
+    background: #555;
+    border-radius: 5px;
+    outline: none;
+    transition: background 0.2s;
+}
+.fetch-retry-setting-wrapper input[type="range"]:hover {
+    background: #666;
+}
+
+.fetch-retry-setting-wrapper input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    background: var(--customThemeColor, #007bff);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #fff;
+}
+
+.fetch-retry-setting-wrapper input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    background: var(--customThemeColor, #007bff);
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #fff;
+}
+
+.fetch-retry-setting-wrapper input[type="number"] {
+    background-color: var(--customBgColor2, #333);
+    border: 1px solid var(--SmartThemeBorderColor, #555);
+    color: var(--SmartThemeBodyColor, #fff);
+    padding: 6px 10px;
+    border-radius: 5px;
+    width: 100%; /* Make it take full width of its container */
+    text-align: center;
+}
+
+.fetch-retry-setting-wrapper textarea {
+    width: 100%;
+    min-height: 150px;
+    background-color: var(--customBgColor2, #2a2a2a);
+    border: 1px solid var(--SmartThemeBorderColor, #555);
+    color: var(--SmartThemeBodyColor, #fff);
+    padding: 10px;
+    border-radius: 5px;
+    box-sizing: border-box;
+    resize: vertical;
+    margin-top: 5px;
+}
+
+.fetch-retry-setting-wrapper .button-container {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    justify-content: flex-end;
+}
+
+/* Warnings and Notes */
+.fetch-retry-warning, .fetch-retry-note {
+    padding: 10px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    font-size: 0.9em;
+    line-height: 1.5;
+}
+
+.fetch-retry-warning {
+    background-color: rgba(255, 165, 0, 0.15);
+    border: 1px solid rgba(255, 165, 0, 0.5);
+    color: #ffcc80;
+}
+
+.fetch-retry-note {
+    background-color: rgba(0, 150, 255, 0.1);
+    border: 1px solid rgba(0, 150, 255, 0.4);
+    color: #80cfff;
+}

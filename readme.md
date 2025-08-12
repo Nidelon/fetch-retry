@@ -1,6 +1,6 @@
 # Fetch Retry
 
-Version: 1.0.0
+Version: 1.1.0
 Author: Jxxy
 
 ## Overview
@@ -28,27 +28,15 @@ If you want to help improve or fix this extension, feel free to fork this reposi
 4. Paste the GitHub repository link:
 
    ```
-   https://github.com/<username>/<repo>
+   https://github.com/Hikarushmz/fetch-retry
    ```
 5. Restart SillyTavern
 
 ## Settings
 
-Since the UI does not work, all settings must be changed directly in the `index.js` file under the `fetchRetrySettings` variable.
-Example:
+You can refer to the extension tab named "Fetch Retry" to modify settings as desired.
 
-```
-let fetchRetrySettings = {
-    enabled: true,
-    maxRetries: 5,
-    retryDelay: 1000,
-    rateLimitDelay: 5000,
-    thinkingTimeout: 60000,
-    checkEmptyResponse: true,
-    minWordCount: 10,
-    emptyResponseRetry: true,
-};
-```
+Please ensure not to enable 'Check for Empty/Short Responses' & 'Retry on Empty/Short Response', as this feature is not yet optimal and causes continuous response regeneration.
 
 ## How It Works
 
@@ -57,5 +45,5 @@ It uses exponential backoff for delays and applies special handling for certain 
 
 ## License
 
-Free to use and modify.
+MIT License
 
