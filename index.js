@@ -8,6 +8,7 @@ import { loadMovingUIState } from '../../../../scripts/power-user.js';
 const EXTENSION_NAME = 'Fetch Retry';
 const settingsKey = 'FetchRetry';
 const extensionName = "fetch-retry";
+const extensionFolderPath = `data/default-user/extensions/${extensionName}`;
 
 let fetchRetrySettings = {
     enabled: true,
@@ -369,7 +370,7 @@ function getBaseUrl() {
         if (currentScript && currentScript.src) {
             baseUrl = currentScript.src.substring(0, currentScript.src.lastIndexOf('/'));
         } else {
-            baseUrl = `${window.location.origin}scripts/extensions/third-party/${extensionName}`;
+            baseUrl = `${window.location.origin}data/default-user/extensions/${extensionName}`;
         }
     }
     return baseUrl;
@@ -697,13 +698,25 @@ if (!(/** @type {any} */ (window))._fetchRetryPatched) {
             return originalFetch.apply(this, args);
         }
 
+        const originalSignal = args[0] instanceof Request ? args[0].signal : (args[1]?.signal);
+        if (originalSignal?.aborted) {
+            return originalFetch.apply(this, args);
+        }
+
         let attempt = 0;
         let lastError;
         let lastResponse;
         const fetchArgs = [...args]; // Use a consistent args object for retries
         
         while (attempt <= fetchRetrySettings.maxRetries) {
+            if (originalSignal?.aborted) {
+                throw lastError ?? new DOMException('Request aborted by user', 'AbortError');
+            }
             const controller = new AbortController();
+            const userAbortHandler = () => controller.abort('User aborted');
+            if (originalSignal) {
+                originalSignal.addEventListener('abort', userAbortHandler, { once: true });
+            }
             const signal = controller.signal;
             let timeoutId;
             let currentFetchArgs = [...fetchArgs]; // Use a copy for this specific attempt
@@ -731,6 +744,9 @@ if (!(/** @type {any} */ (window))._fetchRetryPatched) {
 
                 const result = await Promise.race([fetchPromise, timeoutPromise]);
                 clearTimeout(timeoutId); // Clear timeout if fetch succeeds
+                if (originalSignal) {
+                    originalSignal.removeEventListener('abort', userAbortHandler);
+                }
 
                 lastResponse = result;
                 
@@ -768,12 +784,18 @@ if (!(/** @type {any} */ (window))._fetchRetryPatched) {
                 
             } catch (err) {
                 clearTimeout(timeoutId); // Make sure timeout is cleared if there's another error
+                if (originalSignal) {
+                    originalSignal.removeEventListener('abort', userAbortHandler);
+                }
                 lastError = err;
 
                 if (err.name === 'TimeoutError') {
                     console.warn(`[Fetch Retry] AI thinking timeout (${fetchRetrySettings.thinkingTimeout}ms), retrying... attempt ${attempt + 1}/${fetchRetrySettings.maxRetries + 1}`);
                 } else if (err.name === 'AbortError') {
-                    // Treat AbortError as a retryable error, especially if it's not a user-initiated abort.
+                    if (originalSignal?.aborted || err.message === 'User aborted') {
+                        console.log('[Fetch Retry] Request aborted by user. Not retrying.');
+                        throw err;
+                    }
                     // The TimeoutError already triggers an abort, so this catches other aborts.
                     console.warn(`[Fetch Retry] Request aborted (${err.message}), retrying... attempt ${attempt + 1}/${fetchRetrySettings.maxRetries + 1}`);
                 } else {
