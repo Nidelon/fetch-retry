@@ -7,7 +7,6 @@ Author: Jxxy | Hikarushmz
 
 Fetch Retry is a SillyTavern extension that automatically retries failed fetch requests.
 This tool was made as a fun experiment together with AI, and many features might not work as intended.
-The settings UI inside SillyTavern does not work, so if you want to change settings, you must edit them directly in the `index.js` file.
 
 If you want to help improve or fix this extension, feel free to fork this repository and contribute.
 
