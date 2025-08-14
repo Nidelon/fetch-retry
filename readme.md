@@ -1,6 +1,6 @@
 # Fetch Retry
 
-Version: 1.2.0
+Version: 1.2.5
 Author: Jxxy | Hikarushmz
 
 ## Overview
@@ -19,6 +19,7 @@ If you want to help improve or fix this extension, feel free to fork this reposi
 * Special handling for HTTP 429 Too Many Requests
 * Timeout for stuck "thinking" processes
 * Detects short/incomplete responses and retries automatically
+* Custom Prohibited Bypass (check the admin.js)
 
 ## Installation
 
