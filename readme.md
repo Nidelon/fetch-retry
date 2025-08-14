@@ -45,5 +45,5 @@ It uses exponential backoff for delays and applies special handling for certain 
 
 ## License
 
-MIT License
+GPL-3.0 license
 
