@@ -1,10 +1,10 @@
 {
-  "display_name": "Fetch Retry",
+  "display_name": "Fetch Retry fork",
   "loading_order": 1,
   "requires": [],
   "optional": [],
   "js": "index.js",
   "author": "Jxxy",
   "version": "1.2.5",
-  "homePage": "https://github.com/Hikarushmz/fetch-retry"
+  "homePage": "https://github.com/Nidelon/fetch-retry"
 }
