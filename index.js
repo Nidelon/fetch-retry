@@ -12,10 +12,10 @@ const extensionName = "fetch-retry";
 
 let fetchRetrySettings = {
     enabled: true,
-    maxRetries: 5,
-    retryDelay: 5000, // ms
-    rateLimitDelay: 5000, // ms for 429 errors
-    thinkingTimeout: 60000, // ms, timeout for reasoning process
+    maxRetries: 100,
+    retryDelay: 1000, // ms
+    rateLimitDelay: 1000, // ms for 429 errors
+    thinkingTimeout: 120000, // ms, timeout for reasoning process
     checkEmptyResponse: false,
     minWordCount: 10, // minimum words in response
     emptyResponseRetry: false, // retry if response too short
@@ -41,9 +41,9 @@ const customSettings = [
         "type": "slider",
         "varId": "maxRetries",
         "displayText": t`Maximum Retries`,
-        "default": 5,
+        "default": 100,
         "min": 0,
-        "max": 10,
+        "max": 100,
         "step": 1,
         "description": t`The maximum number of times to retry a failed fetch request.`
     },
@@ -51,7 +51,7 @@ const customSettings = [
         "type": "slider",
         "varId": "retryDelay",
         "displayText": t`Retry Delay (ms)`,
-        "default": 5000,
+        "default": 1000,
         "min": 100,
         "max": 60000,
         "step": 100,
@@ -61,7 +61,7 @@ const customSettings = [
         "type": "slider",
         "varId": "rateLimitDelay",
         "displayText": t`Rate Limit Delay (ms)`,
-        "default": 5000,
+        "default": 1000,
         "min": 1000,
         "max": 60000,
         "step": 1000,
@@ -71,7 +71,7 @@ const customSettings = [
         "type": "slider",
         "varId": "thinkingTimeout",
         "displayText": t`AI Thinking Timeout (ms)`,
-        "default": 60000,
+        "default": 120000,
         "min": 10000,
         "max": 300000,
         "step": 10000,
@@ -1105,7 +1105,7 @@ if (!(/** @type {any} */ (window))._fetchRetryPatched) {
                         throw err;
                     }
                     retryReason = `Request aborted (${err.message})`;
-                    shouldRetry = true;
+                    shouldRetry = false;
                 } else if (err.message.includes('Candidate text empty') || (lastResponse && lastResponse.status === 500 && lastError?.message?.includes('Google AI Studio Candidate text empty'))) {
                     retryReason = 'Google AI Studio Candidate text empty';
                     shouldRetry = true;
@@ -1115,15 +1115,21 @@ if (!(/** @type {any} */ (window))._fetchRetryPatched) {
                     shouldRetry = true;
                     isShortResponseForDelay = true;
                     isContentFilterRetry = true; // Set flag for next retry attempt
+                } else if (err.message.startsWith('HTTP 429') || ((response && response.status === 429))) {
+                    retryReason = `Rate limited (429): Too many requests`;
+                    shouldRetry = true;
+                    isShortResponseForDelay = true;
                 } else {
-                    console.warn(`[Fetch Retry] Non-specific error: ${err.message}, checking if retry is possible. Attempt ${attempt + 1}/${fetchRetrySettings.maxRetries + 1}`);
-                    // For other errors, we might still retry if it's a network issue or transient server error
-                    // This logic can be expanded based on specific error types if needed.
-                    shouldRetry = true; // Default to true for unknown errors to attempt recovery
+                    // console.warn(`[Fetch Retry] Non-specific error: ${err.message}, checking if retry is possible. Attempt ${attempt + 1}/${fetchRetrySettings.maxRetries + 1}`);
+                    console.warn(`[Fetch Retry] Non-retryable error or unknown error type: ${err.message}, status: ${lastResponse?.status}.`);
+                    shouldRetry = false;
                 }
 
                 if (shouldRetry) {
                     console.warn(`[Fetch Retry] ${retryReason}, retrying... attempt ${attempt + 1}/${fetchRetrySettings.maxRetries + 1}`);
+                } else {
+                    console.error('[Fetch Retry] Breaking retry loop.');
+                    break;
                 }
                 
                 // If max retries reached, break
