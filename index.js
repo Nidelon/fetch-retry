@@ -14,6 +14,7 @@ let fetchRetrySettings = {
     enabled: true,
     maxRetries: 100,
     retryDelay: 1000, // ms
+    maxRetryDelay: 60000, // ms - Maximum delay ceiling to prevent infinite growth
     rateLimitDelay: 1000, // ms for 429 errors
     thinkingTimeout: 120000, // ms, timeout for reasoning process
     checkEmptyResponse: false,
@@ -43,7 +44,7 @@ const customSettings = [
         "displayText": t`Maximum Retries`,
         "default": 100,
         "min": 0,
-        "max": 100,
+        "max": 1000,
         "step": 1,
         "description": t`The maximum number of times to retry a failed fetch request.`
     },
@@ -56,6 +57,16 @@ const customSettings = [
         "max": 60000,
         "step": 100,
         "description": t`The base delay in milliseconds before retrying a failed request. Uses exponential backoff.`
+    },
+    {
+        "type": "slider",
+        "varId": "maxRetryDelay",
+        "displayText": t`Maximum Retry Delay (ms)`,
+        "default": 60000,
+        "min": 100,
+        "max": 300000,
+        "step": 1000,
+        "description": t`The maximum delay in milliseconds to prevent infinite growth. Sets a ceiling for exponential backoff.`
     },
     {
         "type": "slider",
@@ -849,10 +860,11 @@ function getRetryDelay(error, response, attempt, isShortResponse = false) {
         }
     }
     
-    // For 429 errors, use longer delay
+    // For 429 errors, use longer delay with maximum ceiling
     if (response && response.status === 429) {
         delay = Math.max(delay, fetchRetrySettings.rateLimitDelay * Math.pow(1.5, attempt)); // Exponential backoff
-        if (fetchRetrySettings.debugMode) console.log(`[Fetch Retry Debug] 429 error detected, adjusted delay: ${delay}ms`);
+        delay = Math.min(delay, fetchRetrySettings.maxRetryDelay); // Apply maximum ceiling
+        if (fetchRetrySettings.debugMode) console.log(`[Fetch Retry Debug] 429 error detected, adjusted delay: ${delay}ms (capped at ${fetchRetrySettings.maxRetryDelay}ms)`);
     }
     
     // For responses that are too short, use the specific longer delay
@@ -861,9 +873,10 @@ function getRetryDelay(error, response, attempt, isShortResponse = false) {
         if (fetchRetrySettings.debugMode) console.log(`[Fetch Retry Debug] Short response detected, adjusted delay: ${delay}ms`);
     }
     
-    // Default delay with exponential backoff
+    // Default delay with exponential backoff and maximum ceiling
     delay = Math.max(delay, fetchRetrySettings.retryDelay * Math.pow(1.2, attempt));
-    if (fetchRetrySettings.debugMode) console.log(`[Fetch Retry Debug] Final delay after exponential backoff: ${delay}ms`);
+    delay = Math.min(delay, fetchRetrySettings.maxRetryDelay); // Apply maximum ceiling
+    if (fetchRetrySettings.debugMode) console.log(`[Fetch Retry Debug] Final delay after exponential backoff: ${delay}ms (capped at ${fetchRetrySettings.maxRetryDelay}ms)`);
 
     return delay;
 }
@@ -1115,7 +1128,7 @@ if (!(/** @type {any} */ (window))._fetchRetryPatched) {
                     shouldRetry = true;
                     isShortResponseForDelay = true;
                     isContentFilterRetry = true; // Set flag for next retry attempt
-                } else if (err.message.startsWith('HTTP 429') || ((response && response.status === 429))) {
+                } else if (err.message.startsWith('HTTP 429') || (lastResponse && lastResponse.status === 429)) {
                     retryReason = `Rate limited (429): Too many requests`;
                     shouldRetry = true;
                     isShortResponseForDelay = true;
