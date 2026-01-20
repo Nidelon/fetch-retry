@@ -19,9 +19,19 @@ const defaultSettings = {
 
 let settings = {};
 
+function isStreamingRequest(config) {
+    try {
+        if (!config.body) return false;
+        const body = JSON.parse(config.body);
+        return body.stream === true;
+    } catch (e) {
+        return false;
+    }
+}
+
 async function validateResponse(response, url) {
     const isGen = ['/completion', '/generate', '/chat/completions'].some(e => url.includes(e));
-    if (!isGen) return { ok: true };
+    if (!isGen || isStreamingRequest(config)) return { ok: true };
 
     try {
         const clone = response.clone();
@@ -35,6 +45,8 @@ async function validateResponse(response, url) {
 
         if (settings.checkEmptyResponse) {
             const text = data.choices?.[0]?.message?.content || data.choices?.[0]?.text || data.response || "";
+			if (!text || text.trim().length === 0) return { ok: false, reason: 'empty_text' };
+
             const words = text.trim().split(/\s+/).filter(Boolean).length;
             if (words < settings.minWordCount) return { ok: false, reason: 'too_short' };
         }
@@ -80,7 +92,7 @@ window.fetch = async function (...args) {
                 if (response.status === 429 || response.status >= 500) {
                     throw { status: response.status, message: response.statusText };
                 }
-                return response; // Другие ошибки (401, 404) не ретраим
+                return response;
             }
 
             const validation = await validateResponse(response, url);
