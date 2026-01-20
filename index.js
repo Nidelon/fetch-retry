@@ -140,33 +140,37 @@ function renderSettings() {
                 <b>Fetch Retry</b>
                 <div class="inline-drawer-icon fa-solid fa-circle-chevron-down"></div>
             </div>
-            <div class="inline-drawer-content" style="padding:10px;">
-                ${uiElements.map(el => `
-                    <div class="flex-container flexGap5" style="margin-bottom:10px;">
-                        <label>${el.label}</label>
-                        <input type="${el.type}" id="fr-${el.id}" ${el.type === 'checkbox' ? (settings[el.id] ? 'checked' : '') : `value="${settings[el.id]}"`} 
-                        ${el.min !== undefined ? `min="${el.min}"` : ''} class="text_pole">
-                    </div>
-                `).join('')}
-                <button id="fr-save" class="menu_button">Apply & Save</button>
+            <div class="inline-drawer-content">
+                <div class="setup-item" style="padding: 10px; display: flex; flex-direction: column; gap: 10px;">
+                    ${uiElements.map(el => `
+                        <div class="flex-container flexGap5">
+                            <label for="fr-${el.id}">${el.label}</label>
+                            <input type="${el.type}" id="fr-${el.id}" 
+                                ${el.type === 'checkbox' ? (settings[el.id] ? 'checked' : '') : `value="${settings[el.id]}"`} 
+                                ${el.min !== undefined ? `min="${el.min}"` : ''} 
+                                class="text_pole">
+                        </div>
+                    `).join('')}
+                    <button id="fr-save" class="menu_button">Apply & Save Settings</button>
+                </div>
             </div>
         </div>
     `;
 
     container.append(html);
 
-    $('#fr-save').on('click', () => {
+    $('#fr-save').on('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
         uiElements.forEach(el => {
-            const val = $(`#fr-${el.id}`).is(':checkbox') ? $(`#fr-${el.id}`).prop('checked') : Number($(`#fr-${el.id}`).val());
+            const input = $(`#fr-${el.id}`);
+            const val = el.type === 'checkbox' ? input.prop('checked') : Number(input.val());
             settings[el.id] = val;
         });
+        
         SillyTavern.getContext().saveSettingsDebounced();
-        toastr.success('Settings saved (Refreshed context)');
-    });
-
-    $(`#${settingsKey}-drawer .inline-drawer-toggle`).on('click', function() {
-        $(this).closest('.inline-drawer').find('.inline-drawer-content').slideToggle();
-        $(this).find('.inline-drawer-icon').toggleClass('fa-circle-chevron-down fa-circle-chevron-up');
+        toastr.success('Fetch Retry settings saved!');
     });
 }
 
