@@ -1,49 +1,37 @@
 # Fetch Retry
 
-Version: 1.2.5
-Author: Jxxy | Hikarushmz
+**Version:** 2.0.0  
+**Author:** Jxxy, Nidelon
 
 ## Overview
+Fetch Retry is a high-performance SillyTavern extension designed to ensure chat continuity. It intercepts network requests to automatically handle API failures, rate limits, and content filter blocks.
 
-Fetch Retry is a SillyTavern extension that automatically retries failed fetch requests.
-This tool was made as a fun experiment together with AI, and many features might not work as intended.
-
-If you want to help improve or fix this extension, feel free to fork this repository and contribute.
-
-## Features
-
-* Automatically retries failed fetch requests
-* Adjustable maximum retries
-* Adjustable retry delay
-* Special handling for HTTP 429 Too Many Requests
-* Timeout for stuck "thinking" processes
-* Detects short/incomplete responses and retries automatically
-* Custom Prohibited Bypass (check the admin.js)
+## Key Features
+*   **Smart Retries:** Automatically recovers from 429 (Rate Limit) and 5xx (Server Error) status codes.
+*   **Filter Bypass:** Aggressively transforms requests when a "Prohibited Content" error is detected (configurable via `admin.js`).
+*   **Response Validation:** Retries if the AI response is too short, empty, or cuts off abruptly.
+*   **Thinking Timeout:** Prevents "infinite loading" by timing out and retrying stuck requests.
+*   **Optimized Performance:** Cleaned-up monkey-patching logic with minimal overhead.
 
 ## Installation
-
-1. Open SillyTavern
-2. Go to the Extensions menu
-3. Select "Install Extension From URL"
-4. Paste the GitHub repository link:
-
+1. Open **SillyTavern**.
+2. Go to the **Extensions** menu (Extensions icon in the top bar).
+3. Select **"Install Extension From URL"**.
+4. Paste the repository link:
    ```
-   https://github.com/Hikarushmz/fetch-retry
+   https://github.com/Nidelon/fetch-retry
    ```
-5. Restart SillyTavern
+5. Restart SillyTavern.
 
 ## Settings
+Access the **Fetch Retry** drawer in the extensions panel to configure:
+*   **Max Retries:** Number of attempts before giving up.
+*   **Base Delay:** Initial wait time between retries (uses exponential backoff for rate limits).
+*   **Min Word Count:** Ensures the AI provides a substantial response.
+*   **Aggressive Bypass:** Enable this to allow the extension to modify prompt words to bypass strict API filters.
 
-You can refer to the extension tab named "Fetch Retry" to modify settings as desired.
-
-Please ensure not to enable 'Check for Empty/Short Responses' & 'Retry on Empty/Short Response', as this feature is not yet optimal and causes continuous response regeneration.
-
-## How It Works
-
-The extension monkey-patches the browser's native `fetch` function, adding retry logic for errors or incomplete responses.
-It uses exponential backoff for delays and applies special handling for certain AI generation endpoints.
+## How it Works
+The extension replaces the global `window.fetch` with a wrapper that monitors API responses. Unlike previous versions, this refactor uses response cloning to prevent "body already read" errors and properly manages `AbortController` signals for clean request cancellation.
 
 ## License
-
 GPL-3.0 license
-
