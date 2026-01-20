@@ -1,5 +1,4 @@
 import { t } from '../../../../scripts/i18n.js';
-import { dragElement } from '../../../../scripts/RossAscends-mods.js';
 import { aggressiveRetryTransform } from './admin.js';
 
 const settingsKey = 'FetchRetry';
@@ -96,7 +95,6 @@ window.fetch = async function (...args) {
 
             if (attempt > settings.maxRetries) break;
 
-            const isRateLimit = err.status === 429 || err.reason === 'rate_limited';
             const isRateLimit = err.status === 429 || err.reason === 'rate_limited';
 
             const baseDelay = isRateLimit ? settings.rateLimitDelay : settings.retryDelay;
