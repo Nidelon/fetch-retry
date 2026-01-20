@@ -776,6 +776,10 @@ async function isResponseInvalid(response, url = '') {
 
             // NEW: Check for error object in the JSON response body, even on 200 OK
             if (data.error && data.error.message && typeof data.error.message === 'string') {
+                if (/429|too many requests|rate limit|resource exhausted/i.test(data.error.message) || data.error.code === 429) {
+                    console.warn(`[Fetch Retry] Detected 429 rate limit in JSON response body. Retrying...`);
+                    return { invalid: true, reason: 'rate_limited' };
+                }
                 if (/prohibited|candidate/i.test(data.error.message)) {
                     console.warn(`[Fetch Retry] Detected prohibited content error in JSON response body. Retrying...`);
                     return { invalid: true, reason: 'prohibited_content' };
@@ -845,7 +849,7 @@ async function isResponseInvalid(response, url = '') {
 }
 
 // Helper function to determine delay based on error
-function getRetryDelay(error, response, attempt, isShortResponse = false) {
+function getRetryDelay(error, response, attempt, isShortResponse = false, isRateLimited = false) {
     if (fetchRetrySettings.debugMode) console.log(`[Fetch Retry Debug] Calculating retry delay for attempt ${attempt}. Is short response: ${isShortResponse}`);
     let delay = fetchRetrySettings.minRetryDelay; // Start with minimum delay
     if (fetchRetrySettings.debugMode) console.log(`[Fetch Retry Debug] Initial delay: ${delay}ms`);
@@ -866,7 +870,14 @@ function getRetryDelay(error, response, attempt, isShortResponse = false) {
         delay = Math.min(delay, fetchRetrySettings.maxRetryDelay); // Apply maximum ceiling
         if (fetchRetrySettings.debugMode) console.log(`[Fetch Retry Debug] 429 error detected, adjusted delay: ${delay}ms (capped at ${fetchRetrySettings.maxRetryDelay}ms)`);
     }
-    
+
+    // For rate limited responses detected in JSON body
+    if (isRateLimited) {
+        delay = Math.max(delay, fetchRetrySettings.rateLimitDelay * Math.pow(1.5, attempt)); // Exponential backoff
+        delay = Math.min(delay, fetchRetrySettings.maxRetryDelay); // Apply maximum ceiling
+        if (fetchRetrySettings.debugMode) console.log(`[Fetch Retry Debug] Rate limited response detected, adjusted delay: ${delay}ms (capped at ${fetchRetrySettings.maxRetryDelay}ms)`);
+    }
+
     // For responses that are too short, use the specific longer delay
     if (isShortResponse) {
         delay = Math.max(delay, fetchRetrySettings.shortResponseRetryDelay);
@@ -1070,7 +1081,8 @@ if (!(/** @type {any} */ (window))._fetchRetryPatched) {
                         }
 
                         const isShort = reason === 'too_short' || reason === 'stream_inactivity' || reason === 'stop_and_short' || reason === 'google_ai_studio_error' || reason === 'ai_error_message';
-                        const delay = getRetryDelay(null, processedResult, attempt, isShort);
+                        const isRateLimited = reason === 'rate_limited';
+                        const delay = getRetryDelay(null, processedResult, attempt, isShort, isRateLimited);
                         console.log(`[Fetch Retry] Waiting ${delay}ms before retry...`);
                         await new Promise(resolve => setTimeout(resolve, delay));
                         attempt++;
@@ -1089,9 +1101,11 @@ if (!(/** @type {any} */ (window))._fetchRetryPatched) {
                     // Client errors other than 429 usually don't need retry
                     console.error(`[Fetch Retry] Client error (${result.status}): ${result.statusText}. Not retrying.`);
                     throw new Error(`HTTP ${result.status}: ${result.statusText}`);
+                } else {
+                    // For other non-ok statuses like 3xx, log as unexpected
+                    console.error(`[Fetch Retry] Unexpected HTTP status: ${result.status}. Throwing error.`);
                 }
-                
-                console.error(`[Fetch Retry] Unexpected HTTP status: ${result.status}. Throwing error.`);
+
                 throw new Error(`HTTP ${result.status}: ${result.statusText}`);
                 
             } catch (err) {
@@ -1130,6 +1144,10 @@ if (!(/** @type {any} */ (window))._fetchRetryPatched) {
                     isContentFilterRetry = true; // Set flag for next retry attempt
                 } else if (err.message.startsWith('HTTP 429') || (lastResponse && lastResponse.status === 429)) {
                     retryReason = `Rate limited (429): Too many requests`;
+                    shouldRetry = true;
+                    isShortResponseForDelay = true;
+                } else if (err.message.startsWith('HTTP 5') || (lastResponse && lastResponse.status >= 500)) {
+                    retryReason = `Server error (${lastResponse.status}): ${lastResponse.statusText}`;
                     shouldRetry = true;
                     isShortResponseForDelay = true;
                 } else {
