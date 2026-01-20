@@ -97,9 +97,11 @@ window.fetch = async function (...args) {
             if (attempt > settings.maxRetries) break;
 
             const isRateLimit = err.status === 429 || err.reason === 'rate_limited';
-            let delay = isRateLimit 
-                ? settings.rateLimitDelay * Math.pow(1.5, attempt) 
-                : settings.retryDelay;
+            const isRateLimit = err.status === 429 || err.reason === 'rate_limited';
+
+            const baseDelay = isRateLimit ? settings.rateLimitDelay : settings.retryDelay;
+
+            let delay = baseDelay * Math.pow(1.5, attempt);
 
             const finalDelay = Math.min(delay, settings.maxRetryDelay);
 
