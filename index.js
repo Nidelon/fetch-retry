@@ -5,9 +5,9 @@ import { aggressiveRetryTransform } from './admin.js';
 const settingsKey = 'FetchRetry';
 const defaultSettings = {
     enabled: true,
-    maxRetries: 5,
+    maxRetries: 1000,
     retryDelay: 1000,
-    maxRetryDelay: 30000,
+    maxRetryDelay: 5000,
     rateLimitDelay: 2000,
     thinkingTimeout: 120000,
     checkEmptyResponse: false,
@@ -96,11 +96,15 @@ window.fetch = async function (...args) {
 
             if (attempt > settings.maxRetries) break;
 
-            const isRateLimit = err.status === 429;
-            const delay = isRateLimit ? settings.rateLimitDelay * attempt : settings.retryDelay;
+            const isRateLimit = err.status === 429 || err.reason === 'rate_limited';
+            let delay = isRateLimit 
+                ? settings.rateLimitDelay * Math.pow(1.5, attempt) 
+                : settings.retryDelay;
+
             const finalDelay = Math.min(delay, settings.maxRetryDelay);
 
-            console.warn(`[Fetch Retry] Failed: ${err.message || err.reason}. Retrying in ${finalDelay}ms...`);
+            if (settings.debugMode) console.log(`[Fetch Retry] Wait ${finalDelay}ms before next attempt.`);
+            
             await new Promise(r => setTimeout(r, finalDelay));
         }
     }
@@ -121,8 +125,9 @@ function loadSettings() {
 
 const uiElements = [
     { id: 'enabled', type: 'checkbox', label: 'Enable Extension' },
-    { id: 'maxRetries', type: 'number', label: 'Max Retries', min: 0, max: 100 },
+    { id: 'maxRetries', type: 'number', label: 'Max Retries', min: 0, max: 1000 },
     { id: 'retryDelay', type: 'number', label: 'Base Delay (ms)', step: 100 },
+	{ id: 'maxRetryDelay', type: 'number', label: 'Max Retry Delay (ms)', step: 1000 },
     { id: 'thinkingTimeout', type: 'number', label: 'AI Thinking Timeout (ms)', step: 1000 },
     { id: 'checkEmptyResponse', type: 'checkbox', label: 'Retry on Empty Responses' },
     { id: 'minWordCount', type: 'number', label: 'Min Word Count' },
