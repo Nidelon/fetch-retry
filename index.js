@@ -158,7 +158,6 @@ const customSettings = [
 ];
 
 function loadSettings(settings) {
-    if (fetchRetrySettings.debugMode) console.log('[Fetch Retry Debug] Loading settings...');
     if (settings) {
         customSettings.forEach(setting => {
             const { varId, type, default: defaultValue } = setting;
@@ -185,7 +184,6 @@ function generateDefaultSettings() {
     const settings = {
         enabled: true,
     };
-
     customSettings.forEach(setting => {
         settings[setting.varId] = setting.default;
     });
@@ -515,11 +513,6 @@ async function isResponseInvalid(response, url = '') {
     if (!fetchRetrySettings.checkEmptyResponse && !fetchRetrySettings.retryOnStopFinishReason && !fetchRetrySettings.retryOnProhibitedContent) {
         return { invalid: false, reason: '' };
     }
-
-    const generationEndpoints = ['/completion', '/generate', '/chat/completions', '/run/predict'];
-    if (!generationEndpoints.some(endpoint => url.includes(endpoint))) {
-        return { invalid: false, reason: '' };
-    }
     
     try {
         const clonedResponse = response.clone();
@@ -593,7 +586,12 @@ function getRetryDelay(response, attempt, isShortResponse = false, isRateLimited
 if (!(/** @type {any} */ (window))._fetchRetryPatched) {
     const originalFetch = window.fetch;
     window.fetch = async function(...args) {
-        if (!fetchRetrySettings.enabled) return originalFetch.apply(this, args);
+        const url = args[0] instanceof Request ? args[0].url : String(args[0]);
+        const targetEndpoint = '/api/backends/chat-completions/generate';
+
+        if (!fetchRetrySettings.enabled || !url.includes(targetEndpoint)) {
+            return originalFetch.apply(this, args);
+        }
 
         const originalSignal = args[0] instanceof Request ? args[0].signal : (args[1]?.signal);
         if (originalSignal?.aborted) return originalFetch.apply(this, args);
