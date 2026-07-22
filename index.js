@@ -513,7 +513,6 @@ async function isResponseInvalid(response, url = '') {
     try {
         const clonedResponse = response.clone();
         const contentType = response.headers.get('content-type') || '';
-        let textToCheck = '';
 
         if (contentType.includes('application/json')) {
             const data = await clonedResponse.json();
@@ -522,6 +521,7 @@ async function isResponseInvalid(response, url = '') {
                 return { invalid: true, reason: 'provider_unavailable' };
             }
 
+            let textToCheck = '';
             if (data.choices && data.choices[0]) {
                 textToCheck = data.choices[0].message?.content || data.choices[0].text || '';
             } else if (data.response) {
@@ -545,10 +545,57 @@ async function isResponseInvalid(response, url = '') {
                 const candidate = data.candidates[0];
                 if (candidate.finishReason === 'PROHIBITED_CONTENT' || !candidate.content?.parts?.length) return { invalid: true, reason: 'prohibited_content' };
             }
-        } else {
-            textToCheck = await clonedResponse.text();
+            return { invalid: false, reason: '' };
         }
 
+        if (!fetchRetrySettings.checkEmptyResponse) {
+            const reader = clonedResponse.body?.getReader();
+            if (!reader) return { invalid: false, reason: '' };
+
+            const decoder = new TextDecoder();
+            let accumulatedText = '';
+            let chunkCount = 0;
+            const maxChunksToCheck = 10;
+
+            try {
+                while (chunkCount < maxChunksToCheck) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    chunkCount++;
+                    accumulatedText += decoder.decode(value, { stream: true });
+
+                    if (
+                        accumulatedText.includes('provider_unavailable') ||
+                        accumulatedText.includes('provider temporarily unavailable') ||
+                        /data:\s*\{.*"error":/i.test(accumulatedText) ||
+                        accumulatedText.includes('returned no candidate') ||
+                        accumulatedText.includes('Candidate text empty')
+                    ) {
+                        reader.cancel();
+                        return { invalid: true, reason: 'provider_unavailable' };
+                    }
+
+                    if (
+                        accumulatedText.includes('"choices"') ||
+                        accumulatedText.includes('"delta"') ||
+                        accumulatedText.includes('"content"') ||
+                        accumulatedText.includes('"reasoning_content"')
+                    ) {
+                        reader.cancel();
+                        return { invalid: false, reason: '' };
+                    }
+                }
+            } catch (streamErr) {
+                console.warn('[Fetch Retry] Error sampling stream:', streamErr);
+            } finally {
+                try { reader.cancel(); } catch (_) {}
+            }
+
+            return { invalid: false, reason: '' };
+        }
+
+        const textToCheck = await clonedResponse.text();
         if (textToCheck) {
             const trimmedText = textToCheck.trim();
 
@@ -564,13 +611,12 @@ async function isResponseInvalid(response, url = '') {
                 return { invalid: true, reason: 'ai_error_message' };
             }
 
-            if (fetchRetrySettings.checkEmptyResponse) {
-                const wordCount = trimmedText.split(/\s+/).filter(Boolean).length;
-                if (wordCount < fetchRetrySettings.minWordCount) return { invalid: true, reason: 'too_short' };
-            }
-        } else if (fetchRetrySettings.checkEmptyResponse) {
+            const wordCount = trimmedText.split(/\s+/).filter(Boolean).length;
+            if (wordCount < fetchRetrySettings.minWordCount) return { invalid: true, reason: 'too_short' };
+        } else {
             return { invalid: true, reason: 'too_short' };
         }
+
     } catch (err) {
         console.warn('[Fetch Retry] Error checking response validity:', err);
     }
