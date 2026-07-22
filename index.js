@@ -510,10 +510,6 @@ function showErrorNotification(error, response) {
 }
 
 async function isResponseInvalid(response, url = '') {
-    if (!fetchRetrySettings.checkEmptyResponse && !fetchRetrySettings.retryOnStopFinishReason && !fetchRetrySettings.retryOnProhibitedContent) {
-        return { invalid: false, reason: '' };
-    }
-    
     try {
         const clonedResponse = response.clone();
         const contentType = response.headers.get('content-type') || '';
@@ -521,6 +517,11 @@ async function isResponseInvalid(response, url = '') {
 
         if (contentType.includes('application/json')) {
             const data = await clonedResponse.json();
+
+            if (data.error || data.type === 'provider_unavailable') {
+                return { invalid: true, reason: 'provider_unavailable' };
+            }
+
             if (data.choices && data.choices[0]) {
                 textToCheck = data.choices[0].message?.content || data.choices[0].text || '';
             } else if (data.response) {
@@ -544,13 +545,24 @@ async function isResponseInvalid(response, url = '') {
                 const candidate = data.candidates[0];
                 if (candidate.finishReason === 'PROHIBITED_CONTENT' || !candidate.content?.parts?.length) return { invalid: true, reason: 'prohibited_content' };
             }
-        } else if (contentType.includes('text/')) {
+        } else {
             textToCheck = await clonedResponse.text();
         }
 
         if (textToCheck) {
             const trimmedText = textToCheck.trim();
-            if (trimmedText.includes('returned no candidate') || trimmedText.includes('Candidate text empty')) return { invalid: true, reason: 'ai_error_message' };
+
+            if (
+                trimmedText.includes('provider_unavailable') ||
+                trimmedText.includes('provider temporarily unavailable') ||
+                /data:\s*\{.*"error":/i.test(trimmedText)
+            ) {
+                return { invalid: true, reason: 'provider_unavailable' };
+            }
+
+            if (trimmedText.includes('returned no candidate') || trimmedText.includes('Candidate text empty')) {
+                return { invalid: true, reason: 'ai_error_message' };
+            }
 
             if (fetchRetrySettings.checkEmptyResponse) {
                 const wordCount = trimmedText.split(/\s+/).filter(Boolean).length;
@@ -648,7 +660,8 @@ if (!(/** @type {any} */ (window))._fetchRetryPatched) {
                     if (invalid && attempt < fetchRetrySettings.maxRetries) {
                         isContentFilterRetry = (reason === 'prohibited_content');
                         const isShort = ['too_short', 'stop_and_short', 'ai_error_message'].includes(reason);
-                        const delay = getRetryDelay(result, attempt, isShort, reason === 'rate_limited');
+                        const isRateLimited = (reason === 'rate_limited' || reason === 'provider_unavailable');
+                        const delay = getRetryDelay(result, attempt, isShort, isRateLimited);
                         await new Promise(r => setTimeout(r, delay));
                         attempt++;
                         continue;
